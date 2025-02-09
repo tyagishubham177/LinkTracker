@@ -4,7 +4,6 @@ on:
   schedule:
     # Scheduled times are specified in UTC.
     # These entries correspond to 9:00, 10:30, 12:00, 1:30, 3:00, 4:30, and 6:00 IST.
-    - cron: "30 3 * * 1-5"   # 09:00 IST (3:30 UTC)
     - cron: "0 5 * * 1-5"    # 10:30 IST (5:00 UTC)
     - cron: "30 6 * * 1-5"   # 12:00 IST (6:30 UTC)
     - cron: "0 8 * * 1-5"    # 13:30 IST (8:00 UTC)
