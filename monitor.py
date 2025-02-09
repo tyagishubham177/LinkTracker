@@ -3,28 +3,48 @@ import requests
 import logging
 from bs4 import BeautifulSoup
 
-# Configure logging to output timestamp, log level, and message.
+# Configure logging to show detailed debug information
 logging.basicConfig(
-    level=logging.DEBUG, 
-    format="%(asctime)s [%(levelname)s] %(message)s",
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname)s] %(message)s"
 )
 
 PRODUCT_URL = "https://shop.amul.com/en/product/amul-high-protein-plain-lassi-200-ml-or-pack-of-30"
 
 def is_available():
     logging.info("Fetching product page: %s", PRODUCT_URL)
+    headers = {
+        # Mimic a common browser user agent so the site returns full content.
+        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                       "AppleWebKit/537.36 (KHTML, like Gecko) "
+                       "Chrome/115.0.0.0 Safari/537.36")
+    }
     try:
-        response = requests.get(PRODUCT_URL, timeout=10)
+        response = requests.get(PRODUCT_URL, headers=headers, timeout=10)
         response.raise_for_status()
         logging.debug("Fetched page successfully. Response length: %d", len(response.text))
     except Exception as e:
         logging.error("Error fetching product page: %s", e)
-        # If there’s an error, treat the product as unavailable.
         return False
 
+    # Log the first 500 characters of the response to check for key strings
+    snippet = response.text[:500].lower()
+    logging.debug("HTML snippet: %s", snippet)
+    
     soup = BeautifulSoup(response.text, "html.parser")
-
-    # --- Approach 1: Check near the product title ---
+    
+    # --- Debug Step: Check if the raw HTML contains unavailability keywords ---
+    if "sold out" in response.text.lower():
+        logging.info("Raw HTML indicates 'sold out'.")
+    else:
+        logging.info("Raw HTML does not indicate 'sold out'.")
+        
+    if "notify me" in response.text.lower():
+        logging.info("Raw HTML indicates 'notify me'.")
+    else:
+        logging.info("Raw HTML does not indicate 'notify me'.")
+    
+    # --- Approach 1: Look for the product title container ---
     title_container = soup.find(
         lambda tag: tag.name in ["h1", "h2", "h3"] and 
                     "amul high protein plain lassi" in tag.get_text(strip=True).lower()
@@ -35,7 +55,9 @@ def is_available():
         if "sold out" in parent_text or "out of stock" in parent_text:
             logging.info("Detected unavailability keywords in the main product container.")
             return False
-
+    else:
+        logging.debug("Product title container not found by expected selector.")
+    
     # --- Approach 2: Look for a 'Notify Me' button ---
     notify_me = soup.find(
         lambda tag: tag.name in ["button", "a"] and 
