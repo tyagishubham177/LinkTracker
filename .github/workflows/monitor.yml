@@ -2,7 +2,15 @@ name: Monitor Product Availability
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Adjust as needed
+    # Scheduled times are specified in UTC.
+    # These entries correspond to 9:00, 10:30, 12:00, 1:30, 3:00, 4:30, and 6:00 IST.
+    - cron: "30 3 * * 1-5"   # 09:00 IST (3:30 UTC)
+    - cron: "0 5 * * 1-5"    # 10:30 IST (5:00 UTC)
+    - cron: "30 6 * * 1-5"   # 12:00 IST (6:30 UTC)
+    - cron: "0 8 * * 1-5"    # 13:30 IST (8:00 UTC)
+    - cron: "30 9 * * 1-5"   # 15:00 IST (9:30 UTC)
+    - cron: "0 11 * * 1-5"   # 16:30 IST (11:00 UTC)
+    - cron: "30 12 * * 1-5"  # 18:00 IST (12:30 UTC)
   workflow_dispatch:
 
 jobs:
@@ -29,7 +37,8 @@ jobs:
         run: python monitor.py
 
       - name: Upload debug HTML
-        uses: actions/upload-artifact@v3
+        # Updated to use v4 of the upload-artifact action
+        uses: actions/upload-artifact@v4
         with:
           name: debug-html
           path: debug.html
