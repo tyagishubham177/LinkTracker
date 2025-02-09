@@ -14,7 +14,6 @@ PRODUCT_URL = "https://shop.amul.com/en/product/amul-high-protein-plain-lassi-20
 def is_available():
     logging.info("Fetching product page: %s", PRODUCT_URL)
     headers = {
-        # Mimic a common browser user agent so the site returns full content.
         "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                        "AppleWebKit/537.36 (KHTML, like Gecko) "
                        "Chrome/115.0.0.0 Safari/537.36")
@@ -27,24 +26,29 @@ def is_available():
         logging.error("Error fetching product page: %s", e)
         return False
 
-    # Log the first 500 characters of the response to check for key strings
+    # Save the full HTML response to a file for debugging purposes
+    with open("debug.html", "w", encoding="utf-8") as f:
+        f.write(response.text)
+        logging.debug("Saved HTML to debug.html")
+
+    # Log a snippet (first 500 characters) of the HTML
     snippet = response.text[:500].lower()
     logging.debug("HTML snippet: %s", snippet)
-    
+
     soup = BeautifulSoup(response.text, "html.parser")
     
-    # --- Debug Step: Check if the raw HTML contains unavailability keywords ---
+    # Raw HTML check for keywords
     if "sold out" in response.text.lower():
         logging.info("Raw HTML indicates 'sold out'.")
     else:
         logging.info("Raw HTML does not indicate 'sold out'.")
-        
+
     if "notify me" in response.text.lower():
         logging.info("Raw HTML indicates 'notify me'.")
     else:
         logging.info("Raw HTML does not indicate 'notify me'.")
-    
-    # --- Approach 1: Look for the product title container ---
+
+    # Check for a product title container (if available)
     title_container = soup.find(
         lambda tag: tag.name in ["h1", "h2", "h3"] and 
                     "amul high protein plain lassi" in tag.get_text(strip=True).lower()
@@ -57,8 +61,8 @@ def is_available():
             return False
     else:
         logging.debug("Product title container not found by expected selector.")
-    
-    # --- Approach 2: Look for a 'Notify Me' button ---
+
+    # Check for a 'Notify Me' button
     notify_me = soup.find(
         lambda tag: tag.name in ["button", "a"] and 
                     "notify me" in tag.get_text(strip=True).lower()
