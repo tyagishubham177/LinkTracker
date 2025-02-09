@@ -2,9 +2,8 @@ name: Monitor Product Availability
 
 on:
   schedule:
-    # Run every hour (adjust the cron as desired)
-    - cron: '0 * * * *'
-  workflow_dispatch:  # Allows manual triggering
+    - cron: '0 * * * *'  # Adjust as needed
+  workflow_dispatch:
 
 jobs:
   monitor:
@@ -13,7 +12,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Python 3.x
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.x'
@@ -25,5 +24,6 @@ jobs:
 
       - name: Run monitor script
         env:
-          IFTTT_WEBHOOK_URL: ${{ secrets.IFTTT_WEBHOOK_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python monitor.py
