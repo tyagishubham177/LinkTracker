@@ -2,28 +2,32 @@
 """
 monitor.py
 
-This script checks the availability of a product on Amul’s shop page.
-It uses Playwright to load the page (executing its JavaScript) so that dynamic
-content is rendered, and then inspects the full HTML for unavailability markers.
-Regardless of whether the product is available or not, the script sends a Telegram
-message with the product URL and the current status.
+This script checks the availability of a product on Amul's shop page.
+It handles the pincode popup and checks product availability status.
+Messages are sent only when the product becomes available.
 """
 
 import time
 import os
 import requests
-from playwright.sync_api import sync_playwright
+from datetime import datetime
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 # URL of the product page to check
 PRODUCT_URL = "https://shop.amul.com/en/product/amul-high-protein-plain-lassi-200-ml-or-pack-of-30"
+# Pincode to enter (change this to your target delivery pincode)
+PINCODE = "380015"  # Example: Ahmedabad pincode
 
-def is_product_available():
+# Store the last known status to only send notifications on state change
+last_status = False
+
+def check_product_availability():
     """
-    Loads the product page using Playwright (to render JavaScript)
-    and checks the complete rendered HTML for unavailability markers.
+    Loads the product page using Playwright, handles the pincode popup,
+    and checks the complete rendered HTML for availability.
     
     Returns:
-        bool: True if the product appears available; False if markers indicate it is unavailable.
+        bool: True if the product is available; False otherwise.
     """
     with sync_playwright() as p:
         # Launch Chromium in headless mode
@@ -31,33 +35,58 @@ def is_product_available():
         context = browser.new_context()
         page = context.new_page()
         
-        print(f"Navigating to {PRODUCT_URL} ...")
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Navigating to {PRODUCT_URL} ...")
         page.goto(PRODUCT_URL, timeout=30000)
         
-        # Wait for network idle state (adjust timeout if needed)
+        # Handle pincode popup
         try:
+            # Wait for pincode input to appear (adjust selector if needed)
+            page.wait_for_selector('input[placeholder="Enter Pincode"]', timeout=10000)
+            
+            # Fill in the pincode
+            page.fill('input[placeholder="Enter Pincode"]', PINCODE)
+            
+            # Click submit/check button (adjust selector if needed)
+            page.click('button:has-text("Check")')
+            
+            print(f"Entered pincode: {PINCODE}")
+            
+            # Wait for page to update after pincode submission
             page.wait_for_load_state("networkidle", timeout=15000)
+        except PlaywrightTimeoutError:
+            print("Warning: Pincode popup not found or has changed. Continuing anyway...")
         except Exception as e:
-            print("Warning: network idle state not reached:", e)
+            print(f"Error handling pincode popup: {e}")
         
-        # Additional wait to ensure that dynamic content is fully rendered
+        # Additional wait to ensure that all dynamic content is loaded
         time.sleep(5)
         
         # Get the full rendered HTML content
         content = page.content()
         
-        # Save HTML for debugging purposes (optional)
+        # Take a screenshot for debugging
+        page.screenshot(path="product_page.png")
+        
+        # Save HTML for debugging purposes
         with open("debug.html", "w", encoding="utf-8") as f:
             f.write(content)
             print("Saved full HTML to debug.html")
         
         browser.close()
         
-        # Perform a case-insensitive check for unavailability markers
+        # Check for availability markers
         content_lower = content.lower()
-        if "sold out" in content_lower or "notify me" in content_lower:
+        
+        # Check for unavailability indicators
+        if "sold out" in content_lower or "notify me" in content_lower or "out of stock" in content_lower:
             return False
-        return True
+            
+        # Check for availability indicators - "add to cart" usually indicates item is in stock
+        if "add to cart" in content_lower:
+            return True
+            
+        # If no clear indicators found, default to unavailable
+        return False
 
 def send_telegram_message(message, bot_token, chat_id):
     """
@@ -77,19 +106,34 @@ def send_telegram_message(message, bot_token, chat_id):
         print("Error sending Telegram message:", e)
 
 def main():
-    available = is_product_available()
+    global last_status
+    
+    # Get current time
+    now = datetime.now()
+    current_time = now.strftime("%Y-%m-%d %H:%M:%S")
+    
+    print(f"[{current_time}] Checking product availability...")
+    available = check_product_availability()
     status = "AVAILABLE" if available else "SOLD OUT or UNAVAILABLE"
-    message = f"Product status: {status}\n{PRODUCT_URL}"
-    print(message)
+    
+    print(f"[{current_time}] Product status: {status}")
     
     # Retrieve Telegram credentials from environment variables
     bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat_id = os.environ.get("TELEGRAM_CHAT_ID")
     
-    if bot_token and chat_id:
-        send_telegram_message(message, bot_token, chat_id)
-    else:
-        print("Telegram credentials not set. Skipping Telegram message.")
+    # Only send a message if the product is available and status has changed
+    if available and available != last_status:
+        message = f"🎉 GOOD NEWS! Product is now AVAILABLE!\n{PRODUCT_URL}\nChecked at: {current_time}"
+        print("Sending availability notification")
+        
+        if bot_token and chat_id:
+            send_telegram_message(message, bot_token, chat_id)
+        else:
+            print("Telegram credentials not set. Skipping Telegram message.")
+    
+    # Update the last status
+    last_status = available
 
 if __name__ == "__main__":
     main()
