@@ -1,37 +1,11 @@
 name: Monitor Amul Product Availability
 
 on:
+  # Runs every 30 minutes, 24/7
   schedule:
-    # Morning checks every 10 minutes (9:00 AM to 12:00 PM IST)
-    - cron: "30 3 * * 1-5"  # 09:00 IST (03:30 UTC)
-    - cron: "40 3 * * 1-5"  # 09:10 IST (03:40 UTC)
-    - cron: "50 3 * * 1-5"  # 09:20 IST (03:50 UTC)
-    - cron: "0 4 * * 1-5"   # 09:30 IST (04:00 UTC)
-    - cron: "10 4 * * 1-5"  # 09:40 IST (04:10 UTC)
-    - cron: "20 4 * * 1-5"  # 09:50 IST (04:20 UTC)
-    - cron: "30 4 * * 1-5"  # 10:00 IST (04:30 UTC)
-    - cron: "40 4 * * 1-5"  # 10:10 IST (04:40 UTC)
-    - cron: "50 4 * * 1-5"  # 10:20 IST (04:50 UTC)
-    - cron: "0 5 * * 1-5"   # 10:30 IST (05:00 UTC)
-    - cron: "10 5 * * 1-5"  # 10:40 IST (05:10 UTC)
-    - cron: "20 5 * * 1-5"  # 10:50 IST (05:20 UTC)
-    - cron: "30 5 * * 1-5"  # 11:00 IST (05:30 UTC)
-    - cron: "40 5 * * 1-5"  # 11:10 IST (05:40 UTC)
-    - cron: "50 5 * * 1-5"  # 11:20 IST (05:50 UTC)
-    - cron: "0 6 * * 1-5"   # 11:30 IST (06:00 UTC)
-    - cron: "10 6 * * 1-5"  # 11:40 IST (06:10 UTC)
-    - cron: "20 6 * * 1-5"  # 11:50 IST (06:20 UTC)
-    - cron: "30 6 * * 1-5"  # 12:00 IST (06:30 UTC)
-    
-    # Afternoon/Evening checks hourly (12:00 PM to 6:00 PM IST)
-    - cron: "30 7 * * 1-5"  # 13:00 IST (07:30 UTC)
-    - cron: "30 8 * * 1-5"  # 14:00 IST (08:30 UTC)
-    - cron: "30 9 * * 1-5"  # 15:00 IST (09:30 UTC)
-    - cron: "30 10 * * 1-5" # 16:00 IST (10:30 UTC)
-    - cron: "30 11 * * 1-5" # 17:00 IST (11:30 UTC)
-    - cron: "30 12 * * 1-5" # 18:00 IST (12:30 UTC)
-  
-  workflow_dispatch:  # Allow manual triggering for testing
+    - cron: "0,30 * * * *"
+  # Allow manual triggering
+  workflow_dispatch:
 
 jobs:
   monitor:
@@ -59,12 +33,14 @@ jobs:
         run: python monitor.py
 
       - name: Upload debug artifacts
-        # Upload both HTML and screenshot for debugging
         uses: actions/upload-artifact@v4
         if: always()  # Always upload, even if script fails
         with:
           name: debug-artifacts
           path: |
-            debug.html
-            product_page.png
-          retention-days: 3
+            monitor_steps.txt
+            final_page.html
+            step1_launched_page.png
+            step2_pincode_typed.png
+            step3_modal_closed.png
+          retention-days: 7
