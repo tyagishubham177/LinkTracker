@@ -77,28 +77,28 @@ def check_product_availability():
         steps_log.append("Took screenshot: step3_modal_closed.png")
 
         # 4) Scope availability checks to the main product container
-        #    so we ignore "Out of Stock" from related items.
-        product_section = page.query_selector("div.product_page.product.desktop.py-4")
-        if product_section:
-            product_html = product_section.inner_html().lower()
-        else:
-            product_html = ""
-
-        # 4a) Check schema.org link itemprop="availability" for "InStock"
-        in_stock_schema = False
-        schema_elem = product_section.query_selector("link[itemprop='availability']") if product_section else None
-        if schema_elem:
-            availability_href = schema_elem.get_attribute("href") or ""
-            if "instock" in availability_href.lower():
-                in_stock_schema = True
-
-        # 4b) Check text for "Add to Cart" within that container
-        has_add_to_cart = "add to cart" in product_html
-
-        # 4c) Decide final availability
-        is_available = in_stock_schema and has_add_to_cart
-        steps_log.append(f"Availability check => in_stock_schema={in_stock_schema}, add_to_cart={has_add_to_cart}")
-        steps_log.append(f"Final availability result: {is_available}")
+         product_section = page.query_selector("div.col-12.col-md-6.product-details-col")
+         if product_section:
+             product_html = product_section.inner_html().lower()
+         else:
+             product_html = ""
+         
+         # 4a) Check schema.org link itemprop="availability" for "InStock"
+         in_stock_schema = False
+         if product_section:
+             schema_elem = product_section.query_selector("link[itemprop='availability']")
+             if schema_elem:
+                 availability_href = schema_elem.get_attribute("href") or ""
+                 if "instock" in availability_href.lower():
+                     in_stock_schema = True
+         
+         # 4b) Check text for "Add to Cart" within that container
+         has_add_to_cart = "add to cart" in product_html
+         
+         # 4c) Final availability
+         is_available = in_stock_schema and has_add_to_cart
+         steps_log.append(f"Availability check => in_stock_schema={in_stock_schema}, add_to_cart={has_add_to_cart}")
+         steps_log.append(f"Final availability result: {is_available}")
 
         # 5) Save final HTML + steps
         content = page.content()
