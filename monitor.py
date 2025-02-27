@@ -24,6 +24,7 @@ PINCODE = "201305"
 # Keep track of last known status so we don't spam notifications
 last_status = False
 
+
 def check_product_availability():
     """
     Handles pincode entry, checks product availability within the main container,
@@ -31,13 +32,15 @@ def check_product_availability():
     """
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        context = browser.new_context(viewport={'width': 1280, 'height': 800})
+        context = browser.new_context(viewport={"width": 1280, "height": 800})
         page = context.new_page()
 
         # We'll store each step in a list and write it out at the end
         steps_log = []
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        steps_log.append(f"[{current_time}] Launching browser & navigating to {PRODUCT_URL}")
+        steps_log.append(
+            f"[{current_time}] Launching browser & navigating to {PRODUCT_URL}"
+        )
 
         # 1) Navigate to product page
         page.goto(PRODUCT_URL, timeout=30000)
@@ -54,14 +57,20 @@ def check_product_availability():
             steps_log.append("Took screenshot: step2_pincode_typed.png")
 
             # Wait for suggestion
-            page.wait_for_selector("#automatic .searchitem-name p.item-name", timeout=10000)
-            suggestion_selector = f"#automatic .searchitem-name p.item-name:has-text('{PINCODE}')"
+            page.wait_for_selector(
+                "#automatic .searchitem-name p.item-name", timeout=10000
+            )
+            suggestion_selector = (
+                f"#automatic .searchitem-name p.item-name:has-text('{PINCODE}')"
+            )
             page.click(suggestion_selector)
             steps_log.append(f"Clicked the pincode suggestion: {PINCODE}")
 
             # Wait for modal to close
             try:
-                page.wait_for_selector("#locationWidgetModal", state="hidden", timeout=5000)
+                page.wait_for_selector(
+                    "#locationWidgetModal", state="hidden", timeout=5000
+                )
                 steps_log.append("Modal closed automatically!")
             except:
                 steps_log.append("Modal might still be open; continuing anyway...")
@@ -77,28 +86,32 @@ def check_product_availability():
         steps_log.append("Took screenshot: step3_modal_closed.png")
 
         # 4) Scope availability checks to the main product container
-         product_section = page.query_selector("div.col-12.col-md-6.product-details-col")
-         if product_section:
-             product_html = product_section.inner_html().lower()
-         else:
-             product_html = ""
-         
-         # 4a) Check schema.org link itemprop="availability" for "InStock"
-         in_stock_schema = False
-         if product_section:
-             schema_elem = product_section.query_selector("link[itemprop='availability']")
-             if schema_elem:
-                 availability_href = schema_elem.get_attribute("href") or ""
-                 if "instock" in availability_href.lower():
-                     in_stock_schema = True
-         
-         # 4b) Check text for "Add to Cart" within that container
-         has_add_to_cart = "add to cart" in product_html
-         
-         # 4c) Final availability
-         is_available = in_stock_schema and has_add_to_cart
-         steps_log.append(f"Availability check => in_stock_schema={in_stock_schema}, add_to_cart={has_add_to_cart}")
-         steps_log.append(f"Final availability result: {is_available}")
+        product_section = page.query_selector("div.col-12.col-md-6.product-details-col")
+        if product_section:
+            product_html = product_section.inner_html().lower()
+        else:
+            product_html = ""
+
+        # 4a) Check schema.org link itemprop="availability" for "InStock"
+        in_stock_schema = False
+        if product_section:
+            schema_elem = product_section.query_selector(
+                "link[itemprop='availability']"
+            )
+            if schema_elem:
+                availability_href = schema_elem.get_attribute("href") or ""
+                if "instock" in availability_href.lower():
+                    in_stock_schema = True
+
+        # 4b) Check text for "Add to Cart" within that container
+        has_add_to_cart = "add to cart" in product_html
+
+        # 4c) Final availability
+        is_available = in_stock_schema and has_add_to_cart
+        steps_log.append(
+            f"Availability check => in_stock_schema={in_stock_schema}, add_to_cart={has_add_to_cart}"
+        )
+        steps_log.append(f"Final availability result: {is_available}")
 
         # 5) Save final HTML + steps
         content = page.content()
@@ -112,6 +125,7 @@ def check_product_availability():
         browser.close()
         return is_available
 
+
 def send_telegram_message(message, bot_token, chat_id):
     """
     Sends a Telegram message via the Bot API.
@@ -123,6 +137,7 @@ def send_telegram_message(message, bot_token, chat_id):
         print("Telegram response:", response.status_code, response.text)
     except Exception as e:
         print("Error sending Telegram message:", e)
+
 
 def main():
     global last_status
@@ -155,6 +170,7 @@ def main():
 
     # Update last_status
     last_status = available
+
 
 if __name__ == "__main__":
     main()
